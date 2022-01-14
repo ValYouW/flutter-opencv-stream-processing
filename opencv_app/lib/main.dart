@@ -1,10 +1,16 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:native_opencv/native_opencv.dart';
 import 'package:opencv_app/detection/detection_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp, DeviceOrientation.portraitDown]);
+
+  final nativeOpencv = NativeOpencv();
+  log('--> OpenCV version: ${nativeOpencv.cvVersion()}');
 
   runApp(const OpenCVApp());
 }

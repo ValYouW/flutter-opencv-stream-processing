@@ -30,6 +30,8 @@ dependencies:
   flutter:
     sdk: flutter
   camera: ^0.9.4+5
+  native_opencv:
+    path: ../native_opencv
 
 dev_dependencies:
   flutter_test:
