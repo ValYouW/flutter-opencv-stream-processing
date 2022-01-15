@@ -1,13 +1,63 @@
 import 'dart:io';
+import 'dart:isolate';
 import 'dart:typed_data';
 import 'package:camera/camera.dart';
 import 'package:flutter/services.dart';
 import 'package:native_opencv/native_opencv.dart';
 
-class ArucoDetector {
+class Request {
+  int reqId;
+  String method;
+  dynamic params;
+  Request({required this.reqId, required this.method, this.params});
+}
+
+class Response {
+  int reqId;
+  dynamic data;
+  Response({required this.reqId, this.data});
+}
+
+late SendPort _toMainThread;
+late _ArucoDetector _detector;
+
+void init(SendPort toMainThread) {
+  // Create ArucoDetector
+  _detector = _ArucoDetector();
+
+  // Save the port on which we will send messages to the main thread
+  _toMainThread = toMainThread;
+
+  // Create a port on which the main thread can send us messages and listen to it
+  ReceivePort fromMainThread = ReceivePort();
+  fromMainThread.listen(_handleMessage);
+
+  // Send the main thread the port on which it can send us messages
+  _toMainThread.send(fromMainThread.sendPort);
+}
+
+void _handleMessage(data) {
+  if (data is Request) {
+    dynamic res;
+    switch (data.method) {
+      case 'detect':
+        var image = data.params['image'] as CameraImage;
+        var rotation = data.params['rotation'];
+        res = _detector.detect(image, rotation);
+        break;
+      case 'destroy':
+        _detector.destroy();
+        break;
+    }
+
+    _toMainThread.send(Response(reqId: data.reqId, data: res));
+  }
+}
+
+class _ArucoDetector {
   NativeOpencv? _nativeOpencv;
 
-  ArucoDetector() {
+  _ArucoDetector() {
     init();
   }
 
