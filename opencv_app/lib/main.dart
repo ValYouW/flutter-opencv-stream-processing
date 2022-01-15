@@ -9,9 +9,6 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp, DeviceOrientation.portraitDown]);
 
-  final nativeOpencv = NativeOpencv();
-  log('--> OpenCV version: ${nativeOpencv.cvVersion()}');
-
   runApp(const OpenCVApp());
 }
 
