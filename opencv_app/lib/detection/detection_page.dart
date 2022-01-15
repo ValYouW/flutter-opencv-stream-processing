@@ -1,6 +1,5 @@
 import 'dart:developer';
 import 'dart:io';
-
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:opencv_app/detection/detections_layer.dart';
@@ -17,6 +16,7 @@ class _DetectionPageState extends State<DetectionPage> with WidgetsBindingObserv
   CameraController? _camController;
   late ArucoDetector _arucoDetector;
   int _camFrameRotation = 0;
+  double _camFrameToScreenScale = 0;
   int _lastRun = 0;
   List<double> _arucos = List.empty();
 
@@ -82,13 +82,38 @@ class _DetectionPageState extends State<DetectionPage> with WidgetsBindingObserv
   }
 
   void _processCameraImage(CameraImage image) async {
-    if (!mounted || DateTime.now().millisecondsSinceEpoch - _lastRun < 200) {
+    if (!mounted || DateTime.now().millisecondsSinceEpoch - _lastRun < 30) {
       return;
     }
 
-    var res = _arucoDetector.detect(image, _camFrameRotation);
+    // calc the scale factor to convert from camera frame coords to screen coords.
+    // NOTE!!!! We assume camera frame takes the entire screen width, if that's not the case
+    // (like if camera is landscape or the camera frame is limited to some area) then you will
+    // have to find the correct scale factor somehow else
+    if (_camFrameToScreenScale == 0) {
+      var w = (_camFrameRotation == 0 || _camFrameRotation == 180) ? image.width : image.height;
+      _camFrameToScreenScale = MediaQuery.of(context).size.width / w;
+    }
 
+    // Call the detector
+    var res = _arucoDetector.detect(image, _camFrameRotation);
     _lastRun = DateTime.now().millisecondsSinceEpoch;
+
+    if (res == null || res.isEmpty) {
+      return;
+    }
+
+    // Check that the number of coords we got divides by 8 exactly, each aruco has 8 coords (4 corners x/y)
+    if ((res.length / 8) != (res.length ~/ 8)) {
+      log('Got invalid response from ArucoDetector, number of coords is ${res.length} and does not represent complete arucos with 4 corners');
+      return;
+    }
+
+    // convert arucos from camera frame coords to screen coords
+    final arucos = res.map((x) => x * _camFrameToScreenScale).toList(growable: false);
+    setState(() {
+      _arucos = arucos;
+    });
   }
 
   @override
