@@ -1,32 +1,44 @@
+import 'dart:developer';
 import 'dart:io';
 import 'dart:isolate';
 import 'dart:typed_data';
 import 'package:camera/camera.dart';
-import 'package:flutter/services.dart';
 import 'package:native_opencv/native_opencv.dart';
 
+// This class will be used as argument to the init method, since we cant access the bundled assets
+// from an Isolate we must get the marker png from the main thread
+class InitRequest {
+  SendPort toMainThread;
+  ByteData markerPng;
+  InitRequest({required this.toMainThread, required this.markerPng});
+}
+
+// this is the class that the main thread will send here asking to invoke a function on ArucoDetector
 class Request {
+  // a correlation id so the main thread will be able to match response with request
   int reqId;
   String method;
   dynamic params;
   Request({required this.reqId, required this.method, this.params});
 }
 
+// this is the class that will be sent as a response to the main thread
 class Response {
   int reqId;
   dynamic data;
   Response({required this.reqId, this.data});
 }
 
+// This is the port that will be used to send data to main thread
 late SendPort _toMainThread;
 late _ArucoDetector _detector;
 
-void init(SendPort toMainThread) {
+void init(InitRequest initReq) {
   // Create ArucoDetector
-  _detector = _ArucoDetector();
+  _detector = _ArucoDetector(initReq.markerPng);
 
   // Save the port on which we will send messages to the main thread
-  _toMainThread = toMainThread;
+  _toMainThread = initReq.toMainThread;
 
   // Create a port on which the main thread can send us messages and listen to it
   ReceivePort fromMainThread = ReceivePort();
@@ -48,6 +60,8 @@ void _handleMessage(data) {
       case 'destroy':
         _detector.destroy();
         break;
+      default:
+        log('Unknown method: ${data.method}');
     }
 
     _toMainThread.send(Response(reqId: data.reqId, data: res));
@@ -57,15 +71,13 @@ void _handleMessage(data) {
 class _ArucoDetector {
   NativeOpencv? _nativeOpencv;
 
-  _ArucoDetector() {
-    init();
+  _ArucoDetector(ByteData markerPng) {
+    init(markerPng);
   }
 
-  init() async {
-    // Read the marker template from the assets folder, note it is read in png format which is what
-    // our c++ init detector code expects
-    final bytes = await rootBundle.load('assets/drawable/marker.png');
-    final pngBytes = bytes.buffer.asUint8List();
+  init(ByteData markerPng) async {
+    // Note our c++ init detector code expects marker to be in png format
+    final pngBytes = markerPng.buffer.asUint8List();
 
     // init the detector
     _nativeOpencv = NativeOpencv();

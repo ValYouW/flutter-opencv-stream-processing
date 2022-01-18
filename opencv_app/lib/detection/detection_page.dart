@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:opencv_app/detection/detections_layer.dart';
-import 'package:opencv_app/detector/aruco_detector.dart';
+import 'package:opencv_app/detector/aruco_detector_async.dart';
 
 class DetectionPage extends StatefulWidget {
   const DetectionPage({Key? key}) : super(key: key);
@@ -14,17 +14,18 @@ class DetectionPage extends StatefulWidget {
 
 class _DetectionPageState extends State<DetectionPage> with WidgetsBindingObserver {
   CameraController? _camController;
-  late ArucoDetector _arucoDetector;
+  late ArucoDetectorAsync _arucoDetector;
   int _camFrameRotation = 0;
   double _camFrameToScreenScale = 0;
   int _lastRun = 0;
+  bool _detectionInProgress = false;
   List<double> _arucos = List.empty();
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance?.addObserver(this);
-    _arucoDetector = ArucoDetector();
+    _arucoDetector = ArucoDetectorAsync();
     initCamera();
   }
 
@@ -82,7 +83,7 @@ class _DetectionPageState extends State<DetectionPage> with WidgetsBindingObserv
   }
 
   void _processCameraImage(CameraImage image) async {
-    if (!mounted || DateTime.now().millisecondsSinceEpoch - _lastRun < 30) {
+    if (_detectionInProgress || !mounted || DateTime.now().millisecondsSinceEpoch - _lastRun < 30) {
       return;
     }
 
@@ -96,10 +97,14 @@ class _DetectionPageState extends State<DetectionPage> with WidgetsBindingObserv
     }
 
     // Call the detector
-    var res = _arucoDetector.detect(image, _camFrameRotation);
+    _detectionInProgress = true;
+    var res = await _arucoDetector.detect(image, _camFrameRotation);
+    _detectionInProgress = false;
     _lastRun = DateTime.now().millisecondsSinceEpoch;
 
-    if (res == null || res.isEmpty) {
+    // Make sure we are still mounted, the background thread can return a response after we navigate away from this
+    // screen but before bg thread is killed
+    if (!mounted || res == null || res.isEmpty) {
       return;
     }
 
