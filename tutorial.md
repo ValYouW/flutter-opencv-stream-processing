@@ -1,8 +1,3 @@
-# Links
-ArucoDetector:
-https://www.thecodingnotebook.com/2021/12/aruco-marker-detection-and-pose.html
-
-
 # Overview
 In this tutorial we will go over on how to use OpenCV with flutter to process real-time camera frames in C++.
 
@@ -11,7 +6,7 @@ The Aruco detector we will use can be found [here](https://github.com/ValYouW/Ar
 Using C/C++ in Flutter is available via [Dart FFI](https://docs.flutter.dev/development/platform-integration/c-interop).
 
 # Get the starter project
-This tutorial is built upon a starter app, you can get the starter app by cloning this repo and checking out to commit `340d63`.
+This tutorial is built upon a starter app, you can get the starter app by cloning this repo and checking out to tag `tutorial-start-here`.
 
 ## The widgets in the starter app
 1. `detection_page.dart` - This is the Aruco detector class, it has a single `detect` method that currently does nothing.
