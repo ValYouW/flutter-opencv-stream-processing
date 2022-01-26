@@ -632,7 +632,7 @@ In `detection_page.dart` use `ArucoDetectorAsync` instead of `ArucoDetector`
 1. In `_processCameraImage`:
     1. use `_detectionInProgress` in the first `if` so it becomes: `if (_detectionInProgress || !mounted || ...`
 	1. use `await` when calling to `detect` and set `_detectionInProgress` to true/false before/after calling detect, and make sure we are still mounted before handling the result:
-	```dart
+```dart
     // Call the detector
     _detectionInProgress = true;
     var res = await _arucoDetector.detect(image, _camFrameRotation);
@@ -644,5 +644,60 @@ In `detection_page.dart` use `ArucoDetectorAsync` instead of `ArucoDetector`
     if (!mounted || res == null || res.isEmpty) {
       return;
     }
-	```
+```
+
+# iOS Support
+Time to handle ios, the items we have to do are:
+1. Add OpenCV as a dependency to `native_opencv` plugin
+1. Add the detector c++ files to `opencv_app`
+1. Add camera permissions to `Info.plist`
+
+## Add OpenCV
+Open `native_opencv/ios/native_opencv.podspec`, it should become
+```
+#
+# To learn more about a Podspec see http://guides.cocoapods.org/syntax/podspec.html.
+# Run `pod lib lint native_opencv.podspec` to validate before publishing.
+#
+Pod::Spec.new do |s|
+  s.name             = 'native_opencv'
+  s.version          = '0.0.1'
+  s.summary          = 'A new flutter plugin project.'
+  s.description      = <<-DESC
+A new flutter plugin project.
+                       DESC
+  s.homepage         = 'http://example.com'
+  s.license          = { :file => '../LICENSE' }
+  s.author           = { 'Your Company' => 'email@example.com' }
+  s.source           = { :path => '.' }
+  s.source_files = 'Classes/**/*'
+  s.static_framework = true # Set as static lib
+  s.dependency 'Flutter'
+  s.dependency 'OpenCV', '4.3.0' # Add opencv dep from cocoapods
+  s.platform = :ios, '11.0' # Update to ios 11
+
+  # Flutter.framework does not contain a i386 slice.
+  s.pod_target_xcconfig = { 'DEFINES_MODULE' => 'YES', 'EXCLUDED_ARCHS[sdk=iphonesimulator*]' => 'i386' }
+  s.swift_version = '5.0'
+end
+```
+
+## Update opencv_app ios build
+1. Go to `opencv_app` and run `flutter pub get`, this will create a Podfile.
+1. Edit `opencv_app/ios/Podfile` and add `platform :ios, '11.0'` to the first line, it is already there just uncomment it and change the ios version
+1. Go to `opencv_app/ios` and run `pod install`
+1. Open in xcode `opencv_app/ios/Runner.xcworkspace`
+1. Edit `Runner/Info.plist` and add key `Privacy - Camera Usage Description` with some description
+1. Right-click on `Runner` group and choose `Add files to Runner...`
+1. Add the file `native_opencv/io/Classes/native_opencv.cpp`
+1. Add the 2 files under `native_opencv/io/Classes/ArucoDetector`
+1. Run the project
+
+
+
+
+
+
+
+
 # THE END
