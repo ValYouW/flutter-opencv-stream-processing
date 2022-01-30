@@ -247,6 +247,9 @@ final _detect = nativeLib.lookupFunction<_c_detect, _dart_detect>('detect');
 
 And inside `class NativeOpencv` define the methods that will be exposed to our app:
 ```dart
+// Reuse this aloocated buffer when running detection so we won't re-allocate on every call to "detect"
+Pointer<Uint8>? _imageBuffer;
+
 void initDetector(Uint8List markerPngBytes, int bits) {
   var totalSize = markerPngBytes.lengthInBytes;
   var imgBuffer = malloc.allocate<Uint8>(totalSize);
@@ -390,7 +393,7 @@ void _processCameraImage(CameraImage image) async {
 }
 ```
 
-# Drawing the Aruco results on DetectionsLayer
+## Drawing the Aruco results on DetectionsLayer
 Take a look at `detections_layer.dart` it is already implemented to draw the arucos onto a canvas using a custom painter.
 
 Run the app and point it to some Arucos, see if it works...
