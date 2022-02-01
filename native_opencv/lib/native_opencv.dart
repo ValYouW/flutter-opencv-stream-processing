@@ -52,11 +52,14 @@ class NativeOpencv {
 
     _initDetector(imgBuffer, totalSize, bits);
 
-    //// todo: Should delete imgBuffer ??
+    malloc.free(imgBuffer);
   }
 
   void destroy() {
     _destroyDetector();
+    if (_imageBuffer != null) {
+      malloc.free(_imageBuffer!);
+    }
   }
 
   Float32List detect(int width, int height, int rotation, Uint8List yBuffer, Uint8List? uBuffer, Uint8List? vBuffer) {
@@ -81,7 +84,7 @@ class NativeOpencv {
     var res = _detect(width, height, rotation, _imageBuffer!, Platform.isAndroid ? true : false, outCount);
     final count = outCount.value;
 
-    //// todo: Should delete outCount ??
+    malloc.free(outCount);
     return res.asTypedList(count);
   }
 }
