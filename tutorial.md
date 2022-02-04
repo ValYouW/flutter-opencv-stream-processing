@@ -453,6 +453,29 @@ void init(InitRequest initReq) {
   _toMainThread.send(fromMainThread.sendPort);
 }
 ```
+This is the `_handleMessage` function where we handle incoming requests from the main thread:
+```dart
+void _handleMessage(data) {
+  if (data is Request) {
+    dynamic res;
+    switch (data.method) {
+      case 'detect':
+        var image = data.params['image'] as CameraImage;
+        var rotation = data.params['rotation'];
+        res = _detector.detect(image, rotation);
+        break;
+      case 'destroy':
+        _detector.destroy();
+        break;
+      default:
+        log('Unknown method: ${data.method}');
+    }
+
+    _toMainThread.send(Response(reqId: data.reqId, data: res));
+  }
+}
+```
+
 And change `_ArucoDetector` to receive the marker png in its constructor and pass it on to its `init` method:
 ```dart
 _ArucoDetector(ByteData markerPng) {
@@ -498,7 +521,9 @@ class ArucoDetectorAsync {
 
     // Spawn a new Isolate using the ArucoDetector.init method as entry point and
     // the port on which it can send us messages as parameter
-    _detectorThread = await Isolate.spawn(aruco_detector.init, fromDetectorThread.sendPort);
+    final bytes = await rootBundle.load('assets/drawable/marker.png');
+    final initReq = aruco_detector.InitRequest(toMainThread: fromDetectorThread.sendPort, markerPng: bytes);
+    _detectorThread = await Isolate.spawn(aruco_detector.init, initReq);
   }
 
   Future<Float32List?> detect(CameraImage image, int rotation) {
